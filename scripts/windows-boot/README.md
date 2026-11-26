@@ -76,6 +76,10 @@ How to read the states: game state `0x7446510` goes 1, 2 (init), 3 (running); se
 screen waiting for A), `d` after A. `docs/linux_proton.md` (the same stages apply natively)
 section 2 has the healthy sequence with times and section 3 "which blank do you have".
 
+To pair scripted presses with state changes after a run, use `python -I tools/stage_timeline.py LOG` with the same
+two environment variables. For a saved log, `--game-state-rva` and `--session-state-rva` override them. If the log
+also records the loading-screen state, pass its hex RVA with `--load-state-rva` to see when the screen ended.
+
 ## One game at a time
 
 The script holds the named mutex `Local\LeonidaGameBoot` for the whole boot and also waits while any `gta6rt.exe`
