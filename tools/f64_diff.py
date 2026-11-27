@@ -378,8 +378,14 @@ def ref_program(lines, include_known=False, exec_lo=M32):
             if any(is_nan(t) or is_inf(t) for t in (x, y, z)):
                 raise SkipCase("non-finite v_div_fmas_f64 operands are not judged")
             exact = to_fraction(x) * to_fraction(y) + to_fraction(z)
-            if vcc: exact *= 1 << 64
-            d = int(dst[2:-1].split(":")[0]); vgpr[d], vgpr[d + 1] = bits_to_words(round_fraction(exact))
+            if vcc:
+                # RDNA2 scales the exact sum before rounding, using the biased exponent of S2.
+                scale_up = ((z >> 52) & 0x7FF) > 1023
+                exact *= (1 << 128) if scale_up else Fraction(1, 1 << 128)
+            negative_zero = z == 0x8000000000000000 and (is_zero(x) or is_zero(y)) and (x >> 63) != (y >> 63)
+            result = round_fraction(exact, negative_zero=negative_zero)
+            d = int(dst[2:-1].split(":")[0])
+            vgpr[d], vgpr[d + 1] = bits_to_words(result)
         else:
             raise HarnessError(f"reference does not implement {op}")
     return [vgpr.get(r, 0) & M32 for r in range(8, 12)]

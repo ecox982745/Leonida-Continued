@@ -105,6 +105,28 @@ class F64DiffTests(unittest.TestCase):
         # the translator now gives the ISA's signed infinity for NaN(S0) too (#4536 was written when it kept the NaN)
         self.assertEqual(known[0], "match")
 
+    def test_div_fmas_reference_scale_and_zero_sign(self):
+        # Signed zeros and the two adjacent values at the |S2| = 2 scale boundary.
+        cases = [
+            (1, "0.0", "1.0", "0x3fffffffffffffff", 0x37FFFFFFFFFFFFFF),
+            (1, "0.0", "1.0", "2.0", 0x4800000000000000),
+            (1, "0.0", "1.0", "-2.0", 0xC800000000000000),
+            (0, "0.0", "1.0", "2.0", 0x4000000000000000),
+            (1, "0.0", "0.5", "0x1638c081db00677e", 0x0E38C081DB00677E),
+            (1, "-0.0", "1.0", "-0.0", 0x8000000000000000),
+            (0, "0.0", "-1.0", "-0.0", 0x8000000000000000),
+            (1, "-0.0", "1.0", "0.0", 0),
+            (1, "1.0", "1.0", "-1.0", 0),
+            (0, "0xa561e1e917ec889c", "2", "0.0", 0x8000000000000000),  # negative underflow
+            # 2^600 * 2^500 overflows before scaling, but 2^(1100-128) is representable.
+            (1, "0x6570000000000000", "0x5f30000000000000", "0.0", 0x7CB0000000000000),
+        ]
+        for vcc, x, y, z, want in cases:
+            with self.subTest(vcc=vcc, x=x, y=y, z=z):
+                words = fd.ref_program([f"v_cmp_eq_i32_e32 vcc_lo, {vcc}, 1",
+                                        f"v_div_fmas_f64 v[8:9], {x}, {y}, {z}"])
+                self.assertEqual(words[:2], [want & 0xFFFFFFFF, want >> 32])
+
     def test_div_fixup_reference_agrees_with_the_translator_at_the_cutoffs(self):
         # biased exponents (S1, S2) around the underflow cutoff and past the old overflow one
         for e1, e2 in ((1075, 1), (1076, 1), (1077, 1), (1, 1024), (1, 1025), (520, 1736), (1, 2046)):
