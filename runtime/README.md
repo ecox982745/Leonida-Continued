@@ -153,9 +153,10 @@ The game's code is built for the console's AMD Zen 2 and uses a few of its instr
 vectored handler before any image code runs (`src/cpu_emulation.h`): it recognises those encodings at the faulting
 address, does the same work on the thread's context and continues after the instruction. It prints one `[rt] cpu:`
 line at startup naming what the host lacks, and one the first time each instruction is emulated. On a host that has
-them the CPU runs them and the handler never sees them. Each emulated instruction costs an exception round trip, so a
-hot loop of them is slow; patching such a site in place is a later step. `cpu_emulation_test` runs every form for
-real: natively on a Zen host, through the handler on an Intel one.
+them the CPU runs them and the handler never sees them. On hosts without `CLWB`, the handler normally replaces each
+`CLWB` instruction the first time it faults. It uses `CLFLUSHOPT` when the host supports it, or a no-op otherwise.
+Set `LEONIDA_CLWB_PATCH=0` to emulate every execution. This incurs an exception for each cache line in a flush loop.
+`cpu_emulation_test` runs every form for real: natively on a Zen host, through the handler on an Intel one.
 
 `module_names` checks native and mapped renamed DLLs, distinct Unicode identities, basename cache
 reuse, existing ACP aliases, the wide and case-insensitive lookups, export execution, and path errors. On native Windows with Python available,
