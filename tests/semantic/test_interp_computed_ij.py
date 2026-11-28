@@ -394,6 +394,16 @@ class ComputedIJBaryFallback(unittest.TestCase):
         self.assertIn("OpDecorate %in_attr1 Location 1", spv)
         self.assertEqual(meta["inputs"], [0, 1])
 
+    def test_sparse_inputs_leave_room_for_two_per_vertex_arrays(self):
+        path = os.path.join(support.HERE, "fixtures", "sparse_bary_locations.asm")
+        with open(path, encoding="utf-8") as fixture:
+            spv, meta = self.translate(fixture.read().splitlines())
+        self.assertEqual(meta["bary_fallback_input"]["per_vertex"], {"20": 9, "21": 12})
+        self.assertEqual(meta["bary_fallback_input"]["location"], 3)
+        self.assertEqual(meta["inputs"], [0, 1, 2, 4, 6, 8, 20, 21])
+        self.assertIn("OpDecorate %in_attr20 Location 9", spv)
+        self.assertIn("OpDecorate %in_attr21 Location 12", spv)
+
     def test_f16_pair_with_the_f16_fallback_too(self):
         """NVIDIA Pascal takes both fallbacks: a computed f16 pair decodes the three vertices' raw words rather than
         the producer's decoded halves, and gives the PerVertexKHR path's halves."""

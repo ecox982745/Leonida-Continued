@@ -15802,7 +15802,9 @@ def assemble(gen):
         taken = {v for k, v in gen.inputs.items() if not (k.startswith("%in_attr") and int(k[8:]) in gen.per_vertex)}
         taken |= {loc for pair in gen.f16_half_locs.values() for loc in pair}
         for n in sorted(gen.per_vertex):
-            base = next(b for b in range(len(taken) + 3) if not {b, b + 1, b + 2} & taken)
+            base = 0
+            while not taken.isdisjoint((base, base + 1, base + 2)):
+                base += 1
             gen.pv_fallback[n] = base
             gen.inputs[f"%in_attr{n}"] = base
             taken |= {base, base + 1, base + 2}
