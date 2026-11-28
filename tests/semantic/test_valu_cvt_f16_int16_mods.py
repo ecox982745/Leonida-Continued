@@ -12,8 +12,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
-from support import mrt0_words, translate_lines  # noqa: E402  (support puts tools/ on sys.path)
-import rdna2spirv  # noqa: E402
+from support import mrt0_words, translate_lines  # noqa: E402
 
 
 def run_ps(lines):
@@ -70,10 +69,17 @@ class CvtF16Int16OutputMods(unittest.TestCase):
         self.assertEqual(words[0], 0x0000FFFE)  # -2 clamped to +0.0 in WORD_1, WORD_0 preserved
         self.assertEqual(words[1], 0x00003C00)  # 2 clamped to 1.0 in WORD_0, WORD_1 padded with 0
 
-    def test_f16_to_int16_output_modifiers_still_rejected(self):
-        for op in ("v_cvt_u16_f16", "v_cvt_i16_f16"):
-            with self.subTest(op=op), self.assertRaises(rdna2spirv.Unsupported):
-                translate_lines("ps_cvt_f16_reject", [f"{op} v0, v0 clamp", "exp mrt0 v0, v0, v0, v0 done vm", "s_endpgm"])
+    def test_f16_to_int16_in_place_ignores_clamp(self):
+        words = run_ps([
+            "v_mov_b32 v0, 0x3f804380",  # low half: +3.75
+            "v_mov_b32 v1, 0x4000c380",  # low half: -3.75
+            "v_cvt_u16_f16 v0, v0 clamp",
+            "v_cvt_i16_f16 v1, v1 clamp",
+            "exp mrt0 v0, v1, v0, v1 done vm",
+            "s_endpgm",
+        ])
+        self.assertEqual(words[0], 0x3F800003)
+        self.assertEqual(words[1], 0x4000FFFD)
 
 
 if __name__ == "__main__":

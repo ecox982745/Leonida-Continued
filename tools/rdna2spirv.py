@@ -10834,7 +10834,7 @@ class Gen:
             # 16-bit <-> f16 conversions of the low half (op_sel:[src,dst] picks the high half of the source / of the
             # destination); the other half of the destination is kept, as for the other 16-bit-result ops. f16 -> int
             # truncates toward zero, saturates to the 16-bit range (an f16 infinity too) and gives 0 for NaN, as the
-            # 32-bit conversions do (docs/design.md, "Float-to-int saturation"); output modifiers stay rejected on it.
+            # 32-bit conversions do (docs/design.md, "Float-to-int saturation").
             # int -> f16 applies clamp_mods (mul:/div: then [0, 1] clamp) and rounds like every f16 result (f16_out).
             sel, dhi = self.opsel_bits(mods, 1)
             if op in ("v_cvt_f16_u16", "v_cvt_f16_i16"):
