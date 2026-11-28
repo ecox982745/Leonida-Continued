@@ -266,27 +266,13 @@ class AluAddSubI16Tests(unittest.TestCase):
             ],
         )
         self.assertEqual(si.run_fragment(spv_mask)["%out_mrt0"][0], 0x0000FFFE)
-        const_match = re.search(
-            r"^(%\S+)\s*=\s*OpConstant\s+%uint\s+65535\b", spv_mask, re.MULTILINE
+        # Remove the low-half extract that feeds the store to v0.
+        spv_mask_mut, count = re.subn(
+            r"(%\w+) = OpBitFieldUExtract %uint (%\w+) %c0 %c10(?=\n[ \t]*OpStore %reg_v0 \1\b)",
+            r"\1 = OpCopyObject %uint \2",
+            spv_mask,
         )
-        self.assertIsNotNone(const_match)
-        c65535 = const_match.group(1)
-        # The low-16 mask is an OpBitFieldUExtract (base 0, count 16), not an OpBitwiseAnd:
-        # NVIDIA's shader compiler miscompiles And & 0xFFFF on values that passed through %int
-        # ops when the result merges with a preserved high half (RTX 4070 SUPER, wave32).
-        mask_matches = list(
-            re.finditer(
-                r"= OpBitFieldUExtract %uint (%\S+) %\S+ %\S+\b", spv_mask
-            )
-        )
-        # one 16-bit mask at least: SHADER-315's constant folding removed the ones on the literal operands
-        self.assertGreaterEqual(len(mask_matches), 1)
-        last = mask_matches[-1]
-        spv_mask_mut = (
-            spv_mask[: last.start()]
-            + f"= OpCopyObject %uint {last.group(1)}"
-            + spv_mask[last.end() :]
-        )
+        self.assertEqual(count, 1)
         self.assertEqual(si.run_fragment(spv_mask_mut)["%out_mrt0"][0], 0xFFFFFFFE)
 
 
