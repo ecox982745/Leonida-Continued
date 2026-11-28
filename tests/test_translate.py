@@ -1671,8 +1671,11 @@ def test_gather_d16_avoids_packhalf2x16(make_shader, suffix, last_addr):
     sh2.validate(asm2)
     assert "PackHalf2x16" not in asm2
     assert "OpBitwiseOr %uint" in asm2 and "OpSelect %uint" in asm2
-    for ty in ("%v4float", "%v4uint_st", "%v4int_st"):
-        assert asm2.count(f"OpImageFetch {ty} ") == (0 if suffix == "lz" else 4)
+    # Resolve result IDs through their vec4 declarations: the unsigned type may be shared with other operations.
+    vec4_elements = dict(re.findall(r"^\s*(%\w+) = OpTypeVector (%\w+) 4$", asm2, re.MULTILINE))
+    fetch_results = re.findall(r"\bOpImageFetch (%\w+) ", asm2)
+    expected = [] if suffix == "lz" else ["%float", "%int", "%uint"] * 4
+    assert sorted(vec4_elements[result] for result in fetch_results) == sorted(expected)
 
 
 def _load_mini_interp():
