@@ -1,0 +1,21 @@
+#version 460
+#extension GL_EXT_buffer_reference : require
+
+layout(local_size_x = 256) in;
+layout(buffer_reference, std430, buffer_reference_align = 4) buffer Words { uint value[]; };
+layout(push_constant) uniform Params { Words data; Words sums; uint seed; uint writeMode; } pc;
+
+void main() {
+    uint lane = gl_LocalInvocationID.x;
+    uint base = gl_WorkGroupID.x * 4096u + lane;
+    uint sum = 0u;
+    for (uint i = 0u; i < 16u; ++i) {
+        uint index = base + 256u * i;
+        if (pc.writeMode != 0u)
+            pc.data.value[index] = index * 747796405u + pc.seed;
+        else
+            sum = sum * 33u + pc.data.value[index];
+    }
+    if (pc.writeMode == 0u)
+        pc.sums.value[gl_GlobalInvocationID.x] = sum;
+}
